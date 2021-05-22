@@ -1,0 +1,9 @@
+bin/
+build/
+.idea/
+cmake-*/
+mot_benchmark/
+output/
+main
+main2
+src/*.o
