@@ -1,122 +1,75 @@
 ## Introduction
-C++ implementation of SORT: Simple, online, and real-time tracking of multiple objects in a video sequence.
+회전된 상자의 IOU를 계산하여 SORT + Hungarian 알고리즘을 접목시킨 방법
 
 Kuhn-Munkres (Hungarian) Algorithm in C++ is forked from:
 https://github.com/saebyn/munkres-cpp
 
 ## Dependencies
-- Ubuntu 18.04
-- OpenCV 4.2
-- Boost 1.58.0
-- 3090 RTX GPU
-
-> All of the 3rd party libraries are included in the provided docker image
-
-## Build Docker Image
-- intflow/nvidia-odtk:3090_Rsort
+- Jetson Xavier
+- OpenCV 4.2 up
 
 ## Docker run
 ```bash
 #!/bin/bash
-#X11
-
-#sudo bash attach_NAS_ftp.sh
 sudo xhost +local:root
 
-#Mount Data folders
-sudo mkdir /DL_data_big
-sudo mount 192.168.0.18:/DL_data_big /DL_data_big
-
-#Run Dockers for CenterNet+DeepSORT
-sudo docker run --name oadnet_neck \
---gpus all --rm -p 6433:6433 \
---mount type=bind,src=/home/intflow/works,dst=/works \
---mount type=bind,src=/DL_data_big,dst=/DL_data_big \
+sudo docker run --name rsort \
+--gpus all \
 --net=host \
 --privileged \
 --ipc=host \
--it intflow/nvidia-odtk:3090_Rsort /bin/bash
+-it intflow/nvidia-odtk:3090_Rsort bash
 ```
 
-## install library
+## Install Library
 ```bash
-apt-get install libboost-all-dev -y 
-apt-get install libeigen3-dev
-apt-get install build-essential gdb
+# apt-get install libboost-all-dev -y # boost를 이용한 IOU 계산법이 아닌 다른 계산법 적용
+apt-get install libeigen3-dev # 회전된 box의 좌표값을 행렬식으로 구하기 위한 라이브러리
+apt-get install build-essential gdb # Cmakefile Debug를 위한 라이브러리
 ```
 
-## Python info 
-- -b cow_tr3_r18_neck_Rsort https://github.com/intflow/nvidia-odtk-workspace.git
+## 사용방법
+- main.cpp 참고
 
-## Demo:
+```c++
+Tracker tracker; // Tracker 선언
 
-![Screenshot-1](docs/1.png)
+// INPUT 데이터의 형식은 다음과 같음
+// bbox_per_frame 에 emplace_back으로 데이터 making
+struct My_RotatedRect {
+    float center_x; // Left X 좌표 (추후 INPUT data가 고정 될 경우 명칭 변경)
+    float center_y; // Top Y 좌표 (추후 INPUT data가 고정 될 경우 명칭 변경)
+    float width; // width
+    float height; // height
+    float angle; // angle -90 ~ +90
+    float landmarksX1; // 계승해야 하는 좌표
+    float landmarksY1; // ''
+};
 
+// Tracker 추적
+tracker.Run(bbox_per_frame);
 
+// Tracker number 얻는 방법
+const auto tracks = tracker.GetTracks();
+for (auto &trk : tracks) {
+    // box 정보를 추출 : My_RotatedRect 형태
+    const auto &bbox = trk.second.GetStateAsBbox();
 
-To run the tracker with the provided detections and visualize the results:
-
-1. Download the [2D MOT 2015 benchmark dataset](https://motchallenge.net/data/2D_MOT_2015/#download)
-
-2. 1번 다운로드가 안되면, Nas server 안에 있는 것 활용할 것
-    ```bash
-    /DL_data_big/MOT_image/MOT15
-    ```
-
-2. Create a symbolic link to the dataset
-    ```bash
-    $ ln -s /path/to/MOT2015_challenge/data/MOT15 /path/to/sort-cpp/mot_benchmark
-    ```
-3. Run the demo
-    ```bash
-    $ cd /path/to/sort-cpp
-    $ mkdir build && cd "$_"
-    $ cmake .. && make
-    $ cd /path/to/sort-cpp/bin
-    # Without display
-    $ ./sort-cpp
-    # With display
-    $ ./sort-cpp -d
-    ```
-
-
-
-## Evaluate Metrics
-
-Using the [Python implementation of metrics for benchmarking multiple object trackers (MOT)](https://github.com/cheind/py-motmetrics) to evaluate metrics. 
-
-
-
-#### Dataset Structure
+    if (trk.second.coast_cycles_ < kMaxCoastCycles
+    && (trk.second.hit_streak_ >= kMinHits || frame_index < kMinHits)) {
+        // Print to terminal for debugging
+        std::cout << frame_index << "," << trk.first << "," << bbox.center_x << "," << bbox.center_y
+                    << "," << bbox.width << "," << bbox.height << "," << bbox.angle << "," << bbox.landmarksX1 << "," << bbox.landmarksY1
+                    << " Hit Streak = " << trk.second.hit_streak_
+                    << " Coast Cycles = " << trk.second.coast_cycles_ << std::endl;
+    }
+    // trk.first : tracker number
+    // trk.second.hit_streak_ : 연속으로 추적한 횟수
+    // trk.second.coast_cycles_ : 연속으로 추적 못한 횟수
 
 ```
-Layout for ground truth data
-    <GT_ROOT>/<SEQUENCE_1>/gt/gt.txt
-    <GT_ROOT>/<SEQUENCE_2>/gt/gt.txt
-    ...
-
-Layout for test data
-    <TEST_ROOT>/<SEQUENCE_1>.txt
-    <TEST_ROOT>/<SEQUENCE_2>.txt
-    ...
-
-Example:
-mot_benchmark
-├── test
-│   ├── ADL-Rundle-6.txt
-│   └── ADL-Rundle-8.txt
-└── train
-    ├── ADL-Rundle-6
-    │   └── gt
-    │       └── gt.txt
-    └── ADL-Rundle-8
-        └── gt
-            └── gt.txt
 
 
-Sequences of ground truth and test will be matched according to the `<SEQUENCE_X>`
-string.
-```
 
 ## References
 1. https://github.com/abewley/sort
