@@ -12,7 +12,12 @@ public:
     Tracker();
     ~Tracker() = default;
 
+    static double distanceCalculate(double x1, double y1, double x2, double y2);
+    static float CalculateDistance(const My_RotatedRect& det, const Track& track);
     static float CalculateIou(const My_RotatedRect& det, const Track& track);
+    static float ExpCost(const My_RotatedRect& det, const Track& track);
+    static float LinCost(const My_RotatedRect& det, const Track& track);
+    static float Angle_Cost(const My_RotatedRect& det, const Track& track);
 
     static void HungarianMatching(const std::vector<std::vector<float>>& iou_matrix,
                            size_t nrows, size_t ncols,
@@ -31,7 +36,7 @@ public:
                                        std::map<int, Track>& tracks,
                                        std::map<int, My_RotatedRect>& matched,
                                        std::vector<My_RotatedRect>& unmatched_det,
-                                       float iou_threshold = -0.1);
+                                       float iou_threshold = 0.2);
 
     void Run(const std::vector<My_RotatedRect>& detections);
 

@@ -25,7 +25,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 file(GLOB SOURCE_FILES src/*.cpp)
 
 add_library(tracker SHARED ${SOURCE_FILES})
-add_library(tracker2 STATIC ${SOURCE_FILES})
+# add_library(tracker2 STATIC ${SOURCE_FILES})
 
 set(OUTPUT_EXEC "${CMAKE_PROJECT_NAME}_app")
 add_executable(${OUTPUT_EXEC} ${SOURCE_FILES})
@@ -34,7 +34,7 @@ target_link_libraries (
         ${OpenCV_LIBS}
 )
 
-install(TARGETS tracker tracker2 ${OUTPUT_EXEC}
+install(TARGETS tracker ${OUTPUT_EXEC}
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
